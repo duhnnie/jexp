@@ -1,4 +1,4 @@
-package jexp
+package expression
 
 import (
 	"encoding/json"

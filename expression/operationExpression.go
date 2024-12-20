@@ -1,4 +1,4 @@
-package jexp
+package expression
 
 type OperationExpression struct {
 	Type     string       `json:"type" required:"true"`

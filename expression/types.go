@@ -1,4 +1,4 @@
-package jexp
+package expression
 
 const (
 	ExpTypeBooleanOperation = "booleanOperation"

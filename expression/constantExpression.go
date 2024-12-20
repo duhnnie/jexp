@@ -1,4 +1,4 @@
-package jexp
+package expression
 
 type constantExpressionValueType interface {
 	int | float64 | bool

@@ -1,4 +1,4 @@
-package jexp
+package expression
 
 type VariableExpression struct {
 	Type string `json:"type" required:"true"`
