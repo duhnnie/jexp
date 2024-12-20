@@ -1,8 +1,12 @@
 package expression
 
 const (
-	ExpTypeBooleanOperation = "booleanOperation"
-	ExpTypeIntOperation     = "intOperation"
-	ExpTypeIntVariable      = "intVariable"
-	ExpTypeIntConstant      = "intConstant"
+	expTypeAnd       = "and"
+	expTypeConst     = "const"
+	expTypeEqual     = "eq"
+	expTypeNot       = "not"
+	expTypeOr        = "or"
+	exptypeSubstract = "subst"
+	expTypeVar       = "var"
+	expTypeClamp     = "clamp"
 )
