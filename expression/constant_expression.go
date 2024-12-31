@@ -1,10 +1,10 @@
 package expression
 
-type ConstantExpression[T supportedTypes] struct {
+type ConstantExpression[T Types] struct {
 	value T
 }
 
-func NewConstant[T supportedTypes](value T) *ConstantExpression[T] {
+func NewConstant[T Types](value T) *ConstantExpression[T] {
 	return &ConstantExpression[T]{value: value}
 }
 

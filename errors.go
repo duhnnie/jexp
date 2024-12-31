@@ -2,60 +2,71 @@ package jexp
 
 import "fmt"
 
-type Error string
+type ErrorCode string
 
-func (e Error) Error() string {
-	return string(e)
+const (
+	ErrorOther                      ErrorCode = "other"
+	ErrorPropertyNotFound           ErrorCode = "property_not_found"
+	ErrorInvalidPropertyType        ErrorCode = "invalid_property_type"
+	ErrorUnsupportedDataType        ErrorCode = "unsupported_data_type"
+	ErrorUnsupportedExpressionType  ErrorCode = "unsupported_expression_type"
+	ErrorUnexpectedExpressionType   ErrorCode = "unexpected_expression_type"
+	ErrorCantResolveToExpressonType ErrorCode = "cant_resolve_to_expression_type"
+	ErrorIncompatibleEqualOperands  ErrorCode = "incompatible_equal_operands"
+)
+
+type PropertyNotFoundError string
+
+func (e PropertyNotFoundError) Error() string {
+	return "property not found: " + string(e)
 }
 
-const ErrorCantResolveToExpression = Error("can't resolve to a known expression")
+type UnexpectedExpressionTypeError string
 
-type ErrorUnknownOperationName string
-
-func (e ErrorUnknownOperationName) Error() string {
-	return fmt.Sprintf("unknown operation name: %s", string(e))
+func (e UnexpectedExpressionTypeError) Error() string {
+	return "unexpected expression type, expected: " + string(e)
 }
 
-type ErrorResolvedToUnexpectedType struct {
-	expectedType string
-	actualType   interface{}
+type UnsupportedDataType string
+
+func (e UnsupportedDataType) Error() string {
+	return "unsupported data type: " + string(e)
 }
 
-func (e *ErrorResolvedToUnexpectedType) Error() string {
-	return fmt.Sprintf("expression resolved to unexpected type (%T), expecting: %s", e.actualType, e.expectedType)
+type UnsupportedExpressionType string
+
+func (e UnsupportedExpressionType) Error() string {
+	return "unsupported expression type: " + string(e)
 }
 
-type ErrorInvalidOperandsCount struct {
-	operationName string
-	minCount      uint
-	maxCount      uint
+type InvalidPropertyTypeError struct {
+	Property     string
+	ExpectedType string
 }
 
-func (e *ErrorInvalidOperandsCount) Error() string {
-	switch {
-	case e.minCount == e.maxCount:
-		return fmt.Sprintf("operands count for operation \"%s\" should be equal to %d\n", e.operationName, e.minCount)
-	case e.minCount == 0:
-		return fmt.Sprintf("operands count for operation \"%s\" should at most %d\n", e.operationName, e.maxCount)
-	case e.maxCount == 0:
-		return fmt.Sprintf("operands count for operation \"%s\" should at least %d\n", e.operationName, e.minCount)
-	case e.minCount > e.maxCount:
-		return fmt.Sprintf("operands count for operation \"%s\" should be between %d and %d\n", e.operationName, e.maxCount, e.minCount)
-	default:
-		return fmt.Sprintf("operands count for operation \"%s\" should be between %d and %d\n", e.operationName, e.minCount, e.maxCount)
+func (e *InvalidPropertyTypeError) Error() string {
+	return fmt.Sprintf("invalid property type in %s, expected: %s", e.Property, e.ExpectedType)
+}
+
+type CantResolveToExpressionTypeError string
+
+func (e CantResolveToExpressionTypeError) Error() string {
+	return "can't resolve to expression type " + string(e)
+}
+
+type JExpError struct {
+	Code ErrorCode
+	Err  error
+}
+
+func NewJExpError(code ErrorCode, err error) *JExpError {
+	return &JExpError{Code: code, Err: err}
+}
+
+func (e *JExpError) Error() string {
+	if e.Err == nil {
+		return string(e.Code)
 	}
-}
 
-type ErrorUnsupportedTypeForComparison struct {
-	unsupportedType any
-}
-
-func (e *ErrorUnsupportedTypeForComparison) Error() string {
-	return fmt.Sprintf("unsupported type for comparison: %T", e.unsupportedType)
-}
-
-type ErrorCantResolveToType string
-
-func (e ErrorCantResolveToType) Error() string {
-	return fmt.Sprintf("can't resolve to type: %s", string(e))
+	return fmt.Sprintf("%s", e.Err)
 }

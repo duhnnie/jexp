@@ -2,11 +2,11 @@ package expression
 
 import "strconv"
 
-type EqualExpression[T supportedTypes] struct {
+type EqualExpression[T Types] struct {
 	Operands []Expression[T]
 }
 
-func NewEqual[T supportedTypes](operands ...Expression[T]) *EqualExpression[T] {
+func NewEqual[T Types](operands ...Expression[T]) *EqualExpression[T] {
 	return &EqualExpression[T]{Operands: operands}
 }
 

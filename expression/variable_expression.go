@@ -1,10 +1,10 @@
 package expression
 
-type VariableExpression[T supportedTypes] struct {
+type VariableExpression[T Types] struct {
 	Name string
 }
 
-func NewVariable[T supportedTypes](name string) *VariableExpression[T] {
+func NewVariable[T Types](name string) *VariableExpression[T] {
 	return &VariableExpression[T]{Name: name}
 }
 
