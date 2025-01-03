@@ -1,7 +1,7 @@
 package expression
 
 type Types interface {
-	float64 | string | bool | int64
+	string | bool | float64
 }
 
 const (

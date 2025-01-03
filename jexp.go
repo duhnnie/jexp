@@ -7,204 +7,235 @@ import (
 	"github.com/duhnnie/jexp/expression"
 )
 
-func New[T expression.Types](jsonData []byte) (expression.Expression[T], *JExpError) {
+func New[T expression.Types](jsonData []byte) (expression.Expression[T], string, *JExpError) {
 	var dict map[string]interface{}
 
 	err := json.Unmarshal(jsonData, &dict)
 
 	if err != nil {
-		return nil, NewJExpError(ErrorOther, err)
+		return nil, "", NewJExpError(ErrorOther, err)
 	}
 
-	if parsed, err := parseDict(dict); err != nil {
-		return nil, err
+	if parsed, pathErr, err := parseDict(dict); err != nil {
+		return nil, pathErr, err
 	} else if jexp, ok := parsed.(expression.Expression[T]); !ok {
 		var x T
-		return nil, NewJExpError(ErrorCantResolveToExpressonType, CantResolveToExpressionTypeError(fmt.Sprintf("%T", x)))
+		return nil, "[root]", NewJExpError(ErrorCantResolveToExpressonType, CantResolveToExpressionTypeError(fmt.Sprintf("%T", x)))
 	} else {
-		return jexp, nil
+		return jexp, "", nil
 	}
 }
 
-func parseToOperandsArray(dict map[string]interface{}) ([]interface{}, *JExpError) {
+func parseToOperandsArray(dict map[string]interface{}) ([]interface{}, string, *JExpError) {
 	if intfc, exists := dict["operands"]; !exists {
-		return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("operands"))
+		return nil, "", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("operands"))
 	} else if interfaceArr, ok := intfc.([]interface{}); !ok {
-		return nil, NewJExpError(ErrorInvalidPropertyType, &InvalidPropertyTypeError{"operands", "array"})
+		return nil, ".operands", NewJExpError(ErrorInvalidPropertyType, InvalidPropertyTypeError("array"))
 	} else {
-		return interfaceArr, nil
+		return interfaceArr, "", nil
 	}
 }
 
-func parseToExpressionArray[T expression.Types](arr []interface{}) ([]expression.Expression[T], *JExpError) {
-	var operands []expression.Expression[T]
+func parseToExpressionArray(arr []interface{}) ([]interface{}, string, *JExpError) {
+	var iExpArray []interface{}
 
 	for index, intfc := range arr {
 		if operandDict, ok := intfc.(map[string]interface{}); !ok {
 			// TODO: consider removing the property name in the error, since that could be retrieved from the errorPath
-			return nil, NewJExpError(ErrorInvalidPropertyType, &InvalidPropertyTypeError{fmt.Sprintf("operands[%d]", index), "object"})
+			return nil, fmt.Sprintf("[%d]", index), NewJExpError(ErrorInvalidPropertyType, InvalidPropertyTypeError("object"))
 		} else {
-			operand, err := parseDict(operandDict)
+			operand, errPath, err := parseDict(operandDict)
 
 			if err != nil {
-				return nil, err
+				return nil, fmt.Sprintf("[%d]%s", index, errPath), err
 			}
 
-			if operandExpression, ok := operand.(expression.Expression[T]); !ok {
-				var x T
-				return nil, NewJExpError(
-					ErrorUnexpectedExpressionType,
-					UnexpectedExpressionTypeError(
-						fmt.Sprintf("%T", x),
-					))
-			} else {
-				operands = append(operands, operandExpression)
-			}
+			iExpArray = append(iExpArray, operand)
 		}
 	}
 
-	return operands, nil
+	return iExpArray, "", nil
 }
 
-func parseOperands[T expression.Types](dict map[string]interface{}) ([]expression.Expression[T], *JExpError) {
-	interfaceArr, err := parseToOperandsArray(dict)
+func parseToExpressionGenericArray[T expression.Types](arr []interface{}) ([]expression.Expression[T], string, *JExpError) {
+	var expressions []expression.Expression[T]
 
-	if err != nil {
-		return nil, err
+	for index, intfc := range arr {
+		if expressionItem, ok := intfc.(expression.Expression[T]); !ok {
+			var x T
+
+			return nil, fmt.Sprintf("[%d]", index), NewJExpError(
+				ErrorUnexpectedExpressionType,
+				UnexpectedExpressionTypeError(
+					fmt.Sprintf("%T", x),
+				))
+		} else {
+			expressions = append(expressions, expressionItem)
+		}
 	}
 
-	return parseToExpressionArray[T](interfaceArr)
+	return expressions, "", nil
 }
 
-func parseSubstract(dict map[string]interface{}) (interface{}, *JExpError) {
-	arr, err := parseToOperandsArray(dict)
+func parseOperands[T expression.Types](dict map[string]interface{}) ([]expression.Expression[T], string, *JExpError) {
+	interfaceArr, errPath, err := parseToOperandsArray(dict)
 
 	if err != nil {
-		return nil, err
+		return nil, errPath, err
 	}
 
-	if expArr, err := parseToExpressionArray[float64](arr); err == nil {
-		return expression.NewSubstract(expArr...), nil
+	intfcArray, errPath, err := parseToExpressionArray(interfaceArr)
+
+	if err != nil {
+		return nil, ".operands" + errPath, err
+	}
+
+	expressions, errPath, err := parseToExpressionGenericArray[T](intfcArray)
+
+	if err != nil {
+		return nil, ".operands" + errPath, err
+	}
+
+	return expressions, "", nil
+}
+
+func parseSubstract(dict map[string]interface{}) (interface{}, string, *JExpError) {
+	arr, errPath, err := parseToOperandsArray(dict)
+
+	if err != nil {
+		return nil, errPath, err
+	}
+
+	intfcArray, errPath, err := parseToExpressionArray(arr)
+
+	if err != nil {
+		return nil, ".operands" + errPath, err
+	}
+
+	if expArr, _, err := parseToExpressionGenericArray[float64](intfcArray); err == nil {
+		return expression.NewSubstract(expArr...), "", nil
 	} else {
-		return nil, err
+		return nil, ".operands", NewJExpError(ErrorIncompatibleEqualOperands, nil)
 	}
 }
 
-func parseVariable(dict map[string]interface{}) (interface{}, *JExpError) {
+func parseVariable(dict map[string]interface{}) (interface{}, string, *JExpError) {
 	if value, exists := dict["value"]; !exists {
-		return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("value"))
+		return nil, "", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("value"))
 	} else if dataType, exists := dict["dataType"]; !exists {
-		return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("dataType"))
+		return nil, "", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("dataType"))
 	} else {
 		switch dataType {
-		case "int":
-			return expression.NewVariable[int64](value.(string)), nil
-		case "float":
-			return expression.NewVariable[float64](value.(string)), nil
+		case "number":
+			return expression.NewVariable[float64](value.(string)), "", nil
 		case "string":
-			return expression.NewVariable[string](value.(string)), nil
-		case "bool":
-			return expression.NewVariable[bool](value.(string)), nil
+			return expression.NewVariable[string](value.(string)), "", nil
+		case "boolean":
+			return expression.NewVariable[bool](value.(string)), "", nil
 		default:
-			return nil, NewJExpError(ErrorUnsupportedDataType, UnsupportedDataType(dataType.(string)))
+			return nil, ".dataType", NewJExpError(ErrorUnsupportedDataType, UnsupportedDataType(dataType.(string)))
 		}
 	}
 }
 
-func parseNot(dict map[string]interface{}) (interface{}, *JExpError) {
+func parseNot(dict map[string]interface{}) (interface{}, string, *JExpError) {
 	if intfc, exists := dict["expression"]; !exists {
-		return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("expression"))
-	} else if operandDict, ok := intfc.(map[string]interface{}); !ok {
-		return nil, NewJExpError(ErrorInvalidPropertyType, &InvalidPropertyTypeError{"expression", "object"})
-	} else if operandExpression, err := parseDict(operandDict); err != nil {
-		return nil, err
+		return nil, "", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("expression"))
+	} else if expressionMap, ok := intfc.(map[string]interface{}); !ok {
+		return nil, ".expression", NewJExpError(ErrorInvalidPropertyType, InvalidPropertyTypeError("object"))
+	} else if operandExpression, errPath, err := parseDict(expressionMap); err != nil {
+		return nil, ".expression" + errPath, err
 	} else if booleanOperand, ok := operandExpression.(expression.Expression[bool]); !ok {
-		return nil, NewJExpError(ErrorUnexpectedExpressionType, UnexpectedExpressionTypeError(fmt.Sprintf("%T", booleanOperand)))
+		return nil, ".expression", NewJExpError(ErrorUnexpectedExpressionType, UnexpectedExpressionTypeError(fmt.Sprintf("%T", booleanOperand)))
 	} else {
-		return expression.NewNot(booleanOperand), nil
+		return expression.NewNot(booleanOperand), "", nil
 	}
 }
 
-func parseOr(dict map[string]interface{}) (*expression.OrExpression, *JExpError) {
-	operandExpressions, err := parseOperands[bool](dict)
+func parseOr(dict map[string]interface{}) (*expression.OrExpression, string, *JExpError) {
+	operandExpressions, errPath, err := parseOperands[bool](dict)
 
 	if err != nil {
-		return nil, err
+		return nil, errPath, err
 	}
 
-	return expression.NewOr(operandExpressions...), nil
+	return expression.NewOr(operandExpressions...), "", nil
 }
 
-func parseAnd(dict map[string]interface{}) (*expression.AndExpression, *JExpError) {
-	operandExpressions, err := parseOperands[bool](dict)
+func parseAnd(dict map[string]interface{}) (*expression.AndExpression, string, *JExpError) {
+	operandExpressions, errPath, err := parseOperands[bool](dict)
 
 	if err != nil {
-		return nil, err
+		return nil, errPath, err
 	}
 
-	return expression.NewAnd(operandExpressions...), nil
+	return expression.NewAnd(operandExpressions...), "", nil
 }
 
-func parseEqual(dict map[string]interface{}) (interface{}, *JExpError) {
-	arr, err := parseToOperandsArray(dict)
+func parseEqual(dict map[string]interface{}) (interface{}, string, *JExpError) {
+	arr, errPath, err := parseToOperandsArray(dict)
 
 	if err != nil {
-		return nil, err
+		return nil, errPath, err
 	}
 
-	// TODO: Evauluate error type to determine if it makes sense to continue parsing to other types.
-	if expArr, err := parseToExpressionArray[float64](arr); err == nil {
-		return expression.NewEqual(expArr...), nil
-	} else if expArr, err := parseToExpressionArray[bool](arr); err == nil {
-		return expression.NewEqual(expArr...), nil
-	} else if expArr, err := parseToExpressionArray[string](arr); err == nil {
-		return expression.NewEqual(expArr...), nil
-	} else if expArr, err := parseToExpressionArray[int64](arr); err == nil {
-		return expression.NewEqual(expArr...), nil
+	iExpArray, errPath, err := parseToExpressionArray(arr)
+
+	if err != nil {
+		return nil, ".operands" + errPath, err
+	}
+
+	// At this point, every expression in array is a valid one.
+	// But now we need to try to type assert them into the same type.
+	// If this fails, we return an error notifying about incompatible types.
+	if expArr, _, err := parseToExpressionGenericArray[float64](iExpArray); err == nil {
+		return expression.NewEqual(expArr...), "", nil
+	} else if expArr, _, err := parseToExpressionGenericArray[bool](iExpArray); err == nil {
+		return expression.NewEqual(expArr...), "", nil
+	} else if expArr, _, err := parseToExpressionGenericArray[string](iExpArray); err == nil {
+		return expression.NewEqual(expArr...), "", nil
 	} else {
-		return nil, NewJExpError(ErrorIncompatibleEqualOperands, nil)
+		return nil, ".operands", NewJExpError(ErrorIncompatibleEqualOperands, nil)
 	}
 }
 
-func parseConstant(dict map[string]interface{}) (interface{}, *JExpError) {
+func parseConstant(dict map[string]interface{}) (interface{}, string, *JExpError) {
 	if value, exists := dict["value"]; !exists {
-		return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("value"))
+		return nil, ".value", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("value"))
 	} else if dataType, exists := dict["dataType"]; !exists {
 		switch v := value.(type) {
 		case float64:
-			return expression.NewConstant[float64](v), nil
+			return expression.NewConstant(v), "", nil
 		case string:
-			return expression.NewConstant[string](v), nil
+			return expression.NewConstant(v), "", nil
 		case bool:
-			return expression.NewConstant[bool](v), nil
+			return expression.NewConstant(v), "", nil
 		default:
-			return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("dataType"))
+			return nil, "", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("dataType"))
 		}
 	} else if dataType, ok := dataType.(string); !ok {
-		return nil, NewJExpError(ErrorInvalidPropertyType, &InvalidPropertyTypeError{"dataType", "string"})
+		return nil, ".dataType", NewJExpError(ErrorInvalidPropertyType, InvalidPropertyTypeError("string"))
 	} else {
 		switch dataType {
-		case "int", "float":
+		case "number":
 			if floatValue, ok := value.(float64); !ok {
-				return nil, NewJExpError(ErrorCantResolveToExpressonType, CantResolveToExpressionTypeError(dataType))
-			} else if dataType == "int" {
-				return expression.NewConstant[int64](int64(floatValue)), nil
+				return nil, ".value", NewJExpError(ErrorCantResolveToExpressonType, CantResolveToExpressionTypeError(dataType))
 			} else {
-				return expression.NewConstant[float64](floatValue), nil
+				return expression.NewConstant(floatValue), "", nil
 			}
 		case "string":
-			return expression.NewConstant[string](value.(string)), nil
-		case "bool":
-			return expression.NewConstant[bool](value.(bool)), nil
+			return expression.NewConstant(value.(string)), "", nil
+		case "boolean":
+			return expression.NewConstant(value.(bool)), "", nil
 		default:
-			return nil, NewJExpError(ErrorUnsupportedDataType, UnsupportedDataType(dataType))
+			return nil, ".dataType", NewJExpError(ErrorUnsupportedDataType, UnsupportedDataType(dataType))
 		}
 	}
 }
 
-func parseDict(dict map[string]interface{}) (interface{}, *JExpError) {
+func parseDict(dict map[string]interface{}) (interface{}, string, *JExpError) {
 	if t, exists := dict["type"]; !exists {
-		return nil, NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("type"))
+		return nil, "", NewJExpError(ErrorPropertyNotFound, PropertyNotFoundError("type"))
 	} else {
 		switch t {
 		case "and":
@@ -222,7 +253,7 @@ func parseDict(dict map[string]interface{}) (interface{}, *JExpError) {
 		case "const":
 			return parseConstant(dict)
 		default:
-			return nil, NewJExpError(ErrorUnsupportedExpressionType, UnsupportedExpressionType(t.(string)))
+			return nil, "", NewJExpError(ErrorUnsupportedExpressionType, UnsupportedExpressionType(t.(string)))
 		}
 	}
 }

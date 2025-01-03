@@ -39,13 +39,10 @@ func (e UnsupportedExpressionType) Error() string {
 	return "unsupported expression type: " + string(e)
 }
 
-type InvalidPropertyTypeError struct {
-	Property     string
-	ExpectedType string
-}
+type InvalidPropertyTypeError string
 
-func (e *InvalidPropertyTypeError) Error() string {
-	return fmt.Sprintf("invalid property type in %s, expected: %s", e.Property, e.ExpectedType)
+func (e InvalidPropertyTypeError) Error() string {
+	return fmt.Sprintf("invalid property type, expected: %s", string(e))
 }
 
 type CantResolveToExpressionTypeError string
