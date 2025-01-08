@@ -36,9 +36,13 @@ import (
 // ----
 
 type ErrorInvalidOperandsCount struct {
-	minCount    uint
-	maxCount    uint
+	minCount    int
+	maxCount    int
 	actualCount int
+}
+
+func NewInvalidOperandsCountError(min, max, actual int) *ErrorInvalidOperandsCount {
+	return &ErrorInvalidOperandsCount{min, max, actual}
 }
 
 func (e *ErrorInvalidOperandsCount) Error() string {
