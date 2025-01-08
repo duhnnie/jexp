@@ -5,14 +5,15 @@ import "fmt"
 type ErrorCode string
 
 const (
-	ErrorOther                      ErrorCode = "other"
-	ErrorPropertyNotFound           ErrorCode = "property_not_found"
-	ErrorInvalidPropertyType        ErrorCode = "invalid_property_type"
-	ErrorUnsupportedDataType        ErrorCode = "unsupported_data_type"
-	ErrorUnsupportedExpressionType  ErrorCode = "unsupported_expression_type"
-	ErrorUnexpectedExpressionType   ErrorCode = "unexpected_expression_type"
-	ErrorCantResolveToExpressonType ErrorCode = "cant_resolve_to_expression_type"
-	ErrorIncompatibleEqualOperands  ErrorCode = "incompatible_equal_operands"
+	ErrorCodeOther                      ErrorCode = "other"
+	ErrorCodeInvalidOperandsCount       ErrorCode = "invalid_operands_count"
+	ErrorCodePropertyNotFound           ErrorCode = "property_not_found"
+	ErrorCodeInvalidPropertyType        ErrorCode = "invalid_property_type"
+	ErrorCodeUnsupportedDataType        ErrorCode = "unsupported_data_type"
+	ErrorCodeUnsupportedExpressionType  ErrorCode = "unsupported_expression_type"
+	ErrorCodeUnexpectedExpressionType   ErrorCode = "unexpected_expression_type"
+	ErrorCodeCantResolveToExpressonType ErrorCode = "cant_resolve_to_expression_type"
+	ErrorCodeIncompatibleEqualOperands  ErrorCode = "incompatible_equal_operands"
 )
 
 type PropertyNotFoundError string
@@ -27,15 +28,15 @@ func (e UnexpectedExpressionTypeError) Error() string {
 	return "unexpected expression type, expected: " + string(e)
 }
 
-type UnsupportedDataType string
+type UnsupportedDataTypeError string
 
-func (e UnsupportedDataType) Error() string {
+func (e UnsupportedDataTypeError) Error() string {
 	return "unsupported data type: " + string(e)
 }
 
-type UnsupportedExpressionType string
+type UnsupportedExpressionTypeError string
 
-func (e UnsupportedExpressionType) Error() string {
+func (e UnsupportedExpressionTypeError) Error() string {
 	return "unsupported expression type: " + string(e)
 }
 
