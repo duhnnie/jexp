@@ -7,5 +7,5 @@ func getPath(t, currentPath, childPath string) string {
 		return fmt.Sprintf("%s:%s", t, currentPath)
 	}
 
-	return fmt.Sprintf("%s.[%s]%s", t, currentPath, childPath)
+	return fmt.Sprintf("%s.%s%s", t, currentPath, childPath)
 }

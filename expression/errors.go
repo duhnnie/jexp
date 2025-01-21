@@ -68,3 +68,9 @@ type ErrorCantResolveToType struct {
 func (e *ErrorCantResolveToType) Error() string {
 	return fmt.Sprintf("can't be resolved to type \"%T\", got type \"%T\"", e.expectedTypeValue, e.actualTypeValue)
 }
+
+type ErrorUnknownCompareType string
+
+func (e ErrorUnknownCompareType) Error() string {
+	return fmt.Sprintf("unknown compare type \"%s\"", string(e))
+}
