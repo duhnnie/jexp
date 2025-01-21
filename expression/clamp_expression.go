@@ -16,19 +16,19 @@ func (c *ClampExpression) Resolve(ctx ExpressionContext) (float64, string, error
 	value, errorPath, err := c.Value.Resolve(ctx)
 
 	if err != nil {
-		return 0, getPath(expTypeClamp, "value", errorPath), err
+		return 0, getPath(expTypeClamp, "operands[0]", errorPath), err
 	}
 
 	min, errorPath, err := c.Min.Resolve(ctx)
 
 	if err != nil {
-		return 0, getPath(expTypeClamp, "min", errorPath), err
+		return 0, getPath(expTypeClamp, "operands[1]", errorPath), err
 	}
 
 	max, errorPath, err := c.Max.Resolve(ctx)
 
 	if err != nil {
-		return 0, getPath(expTypeClamp, "max", errorPath), err
+		return 0, getPath(expTypeClamp, "operands[2]", errorPath), err
 	}
 
 	return math.Min(

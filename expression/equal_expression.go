@@ -1,6 +1,6 @@
 package expression
 
-import "strconv"
+import "fmt"
 
 type EqualExpression[T Types] struct {
 	Operands []Expression[T]
@@ -21,7 +21,7 @@ func (e *EqualExpression[T]) Resolve(ctx ExpressionContext) (bool, string, error
 		current, errorPath, err := operand.Resolve(ctx)
 
 		if err != nil {
-			return false, getPath(expTypeEqual, strconv.Itoa(index), errorPath), err
+			return false, getPath(expTypeEqual, fmt.Sprintf("operands[%d]", index), errorPath), err
 		}
 
 		if index > 0 {

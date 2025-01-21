@@ -1,7 +1,5 @@
 package expression
 
-import "strconv"
-
 type SubsctractExpression struct {
 	Operands []Expression[float64]
 }
@@ -18,13 +16,13 @@ func (s *SubsctractExpression) Resolve(ctx ExpressionContext) (float64, string, 
 	op1, errorPath, err := s.Operands[0].Resolve(ctx)
 
 	if err != nil {
-		return 0, getPath(exptypeSubstract, strconv.Itoa(0), errorPath), err
+		return 0, getPath(exptypeSubstract, "operands[0]", errorPath), err
 	}
 
 	op2, errorPath, err := s.Operands[1].Resolve(ctx)
 
 	if err != nil {
-		return 0, getPath(expTypeEqual, strconv.Itoa(0), errorPath), err
+		return 0, getPath(expTypeEqual, "operands[1]", errorPath), err
 	}
 
 	return op1 - op2, "", nil
