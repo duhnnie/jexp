@@ -257,9 +257,45 @@ func parseClamp(dict map[string]interface{}) (interface{}, string, *JExpError) {
 	}
 }
 
+func parseCompare(expType string, dict map[string]interface{}) (interface{}, string, *JExpError) {
+	arr, errPath, err := parseToOperandsArray(dict)
+
+	if err != nil {
+		return nil, errPath, err
+	}
+
+	iExpArray, errPath, err := parseToExpressionArray(arr)
+
+	if err != nil {
+		return nil, ".operands" + errPath, err
+	}
+
+	var compare interface{}
+	var compareError error
+
+	// At this point, every expression in array is a valid one.
+	// But now we need to try to type assert them into the same type.
+	// If this fails, we return an error notifying about incompatible types.
+	if expArr, _, err := parseToExpressionGenericArray[float64](iExpArray); err == nil {
+		compare, compareError = expression.NewCompare(expType, expArr...)
+	} else if expArr, _, err := parseToExpressionGenericArray[string](iExpArray); err == nil {
+		compare, compareError = expression.NewCompare(expType, expArr...)
+	} else {
+		return nil, ".operands", NewJExpError(ErrorCodeIncompatibleEqualOperands, nil)
+	}
+
+	if compareError != nil {
+		return nil, "", NewJExpError(ErrorCodeOther, compareError)
+	} else {
+		return compare, "", nil
+	}
+}
+
 func parseDict(dict map[string]interface{}) (interface{}, string, *JExpError) {
-	if t, exists := dict["type"]; !exists {
+	if ti, exists := dict["type"]; !exists {
 		return nil, "", NewJExpError(ErrorCodePropertyNotFound, PropertyNotFoundError("type"))
+	} else if t, ok := ti.(string); !ok {
+		return nil, ".type", NewJExpError(ErrorCodeInvalidPropertyType, InvalidPropertyTypeError("string"))
 	} else {
 		switch t {
 		case "and":
@@ -278,8 +314,10 @@ func parseDict(dict map[string]interface{}) (interface{}, string, *JExpError) {
 			return parseConstant(dict)
 		case "clamp":
 			return parseClamp(dict)
+		case "gt", "lt", "gte", "lte":
+			return parseCompare(t, dict)
 		default:
-			return nil, "", NewJExpError(ErrorCodeUnsupportedExpressionType, UnsupportedExpressionTypeError(t.(string)))
+			return nil, "", NewJExpError(ErrorCodeUnsupportedExpressionType, UnsupportedExpressionTypeError(t))
 		}
 	}
 }
