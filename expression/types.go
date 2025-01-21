@@ -10,7 +10,7 @@ const (
 	expTypeEqual     = "eq"
 	expTypeNot       = "not"
 	expTypeOr        = "or"
-	exptypeSubstract = "subst"
+	exptypeSubstract = "subs"
 	expTypeVar       = "var"
 	expTypeClamp     = "clamp"
 )
